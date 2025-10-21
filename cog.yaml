@@ -1,0 +1,28 @@
+# Configuration for Cog ⚙️
+# Reference: https://cog.run/yaml
+
+build:
+  # DeepSeek-OCR requires a GPU for inference
+  gpu: true
+  cuda: "12.4"
+
+  # System packages required for image processing and dependencies
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+    - "ffmpeg"
+    - "libsm6"
+    - "libxext6"
+
+  # Python 3.12 (closest to tested 3.12.9)
+  python_version: "3.12"
+
+  # path to a Python requirements.txt file
+  python_requirements: requirements.txt
+
+  # commands run after the environment is setup
+  run:
+    # - "echo 'DeepSeek-OCR environment ready!'"
+
+# predict.py defines how predictions are run on your model
+predict: "predict.py:Predictor"

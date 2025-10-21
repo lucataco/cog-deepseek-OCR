@@ -1,0 +1,26 @@
+# DeepSeek-OCR Dependencies
+# Based on requirements from https://huggingface.co/deepseek-ai/DeepSeek-OCR
+
+# Core ML frameworks - Using compatible versions for CUDA 11.8
+torch==2.5.0
+torchvision==0.20.0
+transformers==4.46.3
+tokenizers==0.20.3
+accelerate>=0.26.0
+
+# Flash Attention for efficient inference
+flash-attn==2.7.3
+
+# Utility libraries
+einops
+addict
+easydict
+
+# Image processing
+Pillow
+opencv-python
+
+# Additional dependencies for model execution
+numpy
+safetensors
+huggingface-hub
