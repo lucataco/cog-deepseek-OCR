@@ -21,20 +21,16 @@ This is a [Cog](https://github.com/replicate/cog) implementation of [DeepSeek-OC
 
 1. Clone this repository:
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/lucataco/cog-deepseek-OCR.git
 cd deepseek-ocr
 ```
 
-2. Download the model checkpoints:
-```bash
-# Download from Hugging Face
-huggingface-cli download deepseek-ai/DeepSeek-OCR --local-dir checkpoints
-```
-
-3. Build the Cog image:
+2. Build the Cog image:
 ```bash
 cog build
 ```
+
+**Note**: Model weights (~20GB) are automatically downloaded from Replicate's CDN on first run using `pget`, a fast parallel downloader. The weights are cached in the `checkpoints/` directory for subsequent runs.
 
 ## Usage
 
@@ -167,10 +163,19 @@ deepseek-ocr/
 
 ### Key Files
 
-- **[predict.py](predict.py)**: Main Cog predictor interface with warning suppression and parameter handling
+- **[predict.py](predict.py)**: Main Cog predictor interface with automatic weight downloading, warning suppression, and parameter handling
 - **[checkpoints/modeling_deepseekocr.py](checkpoints/modeling_deepseekocr.py)**: Core model implementation with custom inference logic
-- **[cog.yaml](cog.yaml)**: Cog configuration specifying the runtime environment
+- **[cog.yaml](cog.yaml)**: Cog configuration specifying the runtime environment and pget installation
 - **[requirements.txt](requirements.txt)**: Python package dependencies
+
+### Automatic Weight Management
+
+The implementation uses [pget](https://github.com/replicate/pget), a fast parallel file downloader, to automatically fetch model weights on first run:
+
+- Weights are downloaded from: `https://weights.replicate.delivery/default/deepseek-ai/DeepSeek-OCR/model.tar`
+- Downloaded to: `checkpoints/` directory
+- Cached for subsequent runs
+- Download time: ~3-5 minutes on a typical connection
 
 ### Running Tests
 
@@ -189,13 +194,21 @@ cog predict -i image=@demo.jpg -i task_mode="Large"
 
 If you encounter model loading errors:
 
-1. Ensure checkpoints are downloaded correctly:
+1. **First Run - Automatic Download**: On the first prediction, the model weights (~20GB) will be automatically downloaded from Replicate's CDN. This may take several minutes depending on your connection speed.
+
+2. **Verify checkpoints**: After download, ensure checkpoints are present:
    ```bash
    ls -la checkpoints/
    # Should contain: config.json, model safetensors files, and Python files
    ```
 
-2. Verify the `__init__.py` file exists in the checkpoints directory
+3. **Manual Download**: If automatic download fails, you can manually download from Hugging Face:
+   ```bash
+   pip install huggingface-hub
+   huggingface-cli download deepseek-ai/DeepSeek-OCR --local-dir checkpoints
+   ```
+
+4. Verify the `__init__.py` file exists in the checkpoints directory
 
 ### GPU Memory Issues
 
