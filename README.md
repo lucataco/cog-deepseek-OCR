@@ -34,98 +34,100 @@ cog build
 
 ## Usage
 
-### Basic OCR
+### Convert to Markdown (Default)
 
-Extract text from an image:
-
-```bash
-cog predict -i image=@your-document.jpg
-```
-
-### Custom Prompt
-
-Use a custom prompt for specific extraction tasks:
+Extract text and convert to markdown format with bounding boxes:
 
 ```bash
-cog predict -i image=@document.jpg -i prompt="<image>\nExtract all table data and convert to markdown."
+cog predict -i image=@document.jpg
 ```
 
-### Grounded OCR with Bounding Boxes
+### Free OCR
 
-Get text with bounding box coordinates:
+Simple text extraction without markdown formatting:
 
 ```bash
-cog predict -i image=@document.jpg -i prompt="<image>\n<|grounding|>Convert the document to markdown."
+cog predict -i image=@document.jpg -i task_type="Free OCR"
 ```
 
-### Task Modes
+### Parse Figure
 
-Choose from pre-configured task modes optimized for different scenarios:
+Extract and describe chart or figure contents:
 
-- **Gundam (Recommended)**: `base_size=1024, image_size=640, crop_mode=True` - Best balance of speed and accuracy
+```bash
+cog predict -i image=@chart.png -i task_type="Parse Figure"
+```
+
+### Locate Object by Reference
+
+Find specific objects or text in the image:
+
+```bash
+cog predict -i image=@classroom.jpg -i task_type="Locate Object by Reference" -i reference_text="the teacher"
+```
+
+### Resolution Size Options
+
+Choose from different resolution presets to balance speed and accuracy:
+
+- **Gundam (Recommended)**: `base_size=1024, image_size=640, crop_mode=True` - Best balance, handles large documents
 - **Tiny**: `base_size=512, image_size=512, crop_mode=False` - Fastest, lower quality
 - **Small**: `base_size=640, image_size=640, crop_mode=False` - Fast with decent quality
 - **Base**: `base_size=1024, image_size=1024, crop_mode=False` - Good quality
 - **Large**: `base_size=1280, image_size=1280, crop_mode=False` - Best quality, slower
-- **Custom**: Specify your own `base_size`, `image_size`, and `crop_mode`
 
-Example:
+Example with custom resolution:
 
 ```bash
-cog predict -i image=@document.jpg -i task_mode="Large"
+cog predict -i image=@document.jpg -i resolution_size="Large"
 ```
 
-### Advanced Options
+### Combined Example
 
 ```bash
 cog predict \
   -i image=@document.jpg \
-  -i task_mode="Custom" \
-  -i base_size=1024 \
-  -i image_size=640 \
-  -i crop_mode=true \
-  -i save_visualization=true \
-  -i test_compress=true
+  -i task_type="Convert to Markdown" \
+  -i resolution_size="Gundam (Recommended)"
 ```
 
 ## API Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image` | Path | Required | Input image to perform OCR on |
-| `prompt` | String | `"<image>\n<|grounding|>Convert the document to markdown."` | Custom prompt for the model |
-| `task_mode` | String | `"Gundam (Recommended)"` | Preset configuration: Tiny, Small, Base, Large, Gundam, or Custom |
-| `base_size` | Integer | `1024` | Base size for image processing (512-2048, only for Custom mode) |
-| `image_size` | Integer | `640` | Target image size for vision encoder (512-2048, only for Custom mode) |
-| `crop_mode` | Boolean | `true` | Enable crop mode for large documents (only for Custom mode) |
-| `save_visualization` | Boolean | `false` | Save visualization results with bounding boxes |
-| `test_compress` | Boolean | `true` | Enable compression testing for visual token optimization |
+| `image` | Path | **Required** | Input image to perform OCR on (supports JPG, PNG, etc.) |
+| `task_type` | String | `"Convert to Markdown"` | Task type: "Convert to Markdown", "Free OCR", "Parse Figure", or "Locate Object by Reference" |
+| `reference_text` | String | `""` | Reference text to locate (only used with "Locate Object by Reference" task). Examples: "the teacher", "20-10", "a red car" |
+| `resolution_size` | String | `"Gundam (Recommended)"` | Resolution preset: "Gundam (Recommended)", "Tiny", "Small", "Base", or "Large" |
 
-## Prompt Templates
+## Task Types Explained
 
-### Standard OCR
-```
-<image>
-Extract the text in the image.
-```
+The model automatically uses optimized prompts for each task type:
 
-### Grounded OCR with Bounding Boxes
-```
-<image>
-<|grounding|>Convert the document to markdown.
-```
+### Convert to Markdown
+Extracts text with structure and converts to markdown format. Includes bounding box detection for grounded OCR.
+- **Use for**: Documents, articles, papers, structured text
+- **Output**: Markdown with headings, paragraphs, lists, etc.
+- **Prompt used**: `<image>\n<|grounding|>Convert the document to markdown.`
 
-### Table Extraction
-```
-<image>
-Parse the table and convert it to markdown format.
-```
+### Free OCR
+Simple text extraction without markdown formatting or complex structure.
+- **Use for**: Quick text extraction, simple documents
+- **Output**: Plain text
+- **Prompt used**: `<image>\nFree OCR.`
 
-### Chart/Figure Analysis
-```
-<image>
-Parse the figure and describe its contents.
-```
+### Parse Figure
+Analyzes and describes charts, graphs, diagrams, and figures.
+- **Use for**: Charts, graphs, diagrams, infographics
+- **Output**: Description of the figure's content
+- **Prompt used**: `<image>\nParse the figure.`
+
+### Locate Object by Reference
+Finds and locates specific objects or text mentioned in the reference.
+- **Use for**: Finding specific elements in complex images
+- **Output**: Location and context of the referenced object
+- **Prompt used**: `<image>\nLocate <|ref|>{reference_text}<|/ref|> in the image.`
+- **Note**: Requires `reference_text` parameter
 
 ## Model Architecture
 
@@ -180,12 +182,19 @@ The implementation uses [pget](https://github.com/replicate/pget), a fast parall
 ### Running Tests
 
 ```bash
-# Test with a sample image
+# Test default (Convert to Markdown)
 cog predict -i image=@demo.jpg
 
-# Test different modes
-cog predict -i image=@demo.jpg -i task_mode="Tiny"
-cog predict -i image=@demo.jpg -i task_mode="Large"
+# Test different task types
+cog predict -i image=@demo.jpg -i task_type="Free OCR"
+cog predict -i image=@demo.jpg -i task_type="Parse Figure"
+
+# Test different resolutions
+cog predict -i image=@demo.jpg -i resolution_size="Tiny"
+cog predict -i image=@demo.jpg -i resolution_size="Large"
+
+# Test locate object
+cog predict -i image=@demo.jpg -i task_type="Locate Object by Reference" -i reference_text="title"
 ```
 
 ## Troubleshooting

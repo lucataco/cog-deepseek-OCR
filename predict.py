@@ -74,39 +74,20 @@ class Predictor(BasePredictor):
     def predict(
         self,
         image: Path = Input(description="Input image to perform OCR on (supports documents, charts, tables, etc.)"),
-        prompt: str = Input(
-            description="Custom prompt for the model. Use '<image>\\n' prefix for standard OCR or '<image>\\n<|grounding|>' for grounded OCR with bounding boxes",
-            default="<image>\n<|grounding|>Convert the document to markdown. "
-        ),
-        task_mode: str = Input(
-            description="Preset configuration for different use cases",
-            choices=["Gundam (Recommended)", "Tiny", "Small", "Base", "Large", "Custom"],
+        resolution_size: str = Input(
+            description="Model resolution size - affects speed and accuracy trade-off",
+            choices=["Gundam (Recommended)", "Tiny", "Small", "Base", "Large"],
             default="Gundam (Recommended)"
         ),
-        base_size: int = Input(
-            description="Base size for image processing (only used when task_mode is 'Custom')",
-            default=1024,
-            ge=512,
-            le=2048
+        task_type: str = Input(
+            description="Type of OCR task to perform",
+            choices=["Convert to Markdown", "Free OCR", "Parse Figure", "Locate Object by Reference"],
+            default="Convert to Markdown"
         ),
-        image_size: int = Input(
-            description="Target image size for vision encoder (only used when task_mode is 'Custom')",
-            default=640,
-            ge=512,
-            le=2048
-        ),
-        crop_mode: bool = Input(
-            description="Enable crop mode for better handling of large documents (only used when task_mode is 'Custom')",
-            default=True
-        ),
-        save_visualization: bool = Input(
-            description="Save visualization results with bounding boxes and detected regions",
-            default=False
-        ),
-        test_compress: bool = Input(
-            description="Enable compression testing for visual token optimization",
-            default=True
-        ),
+        reference_text: str = Input(
+            description="Reference text to locate in the image (only used for 'Locate Object by Reference' task). Example: 'the teacher', '20-10', 'a red car'",
+            default=""
+        )
     ) -> str:
         """
         Run OCR inference on the input image using DeepSeek-OCR.
@@ -114,20 +95,34 @@ class Predictor(BasePredictor):
         Returns the extracted text/markdown content from the image.
         """
 
-        # Configure parameters based on task_mode
-        if task_mode == "Tiny":
-            base_size, image_size, crop_mode = 512, 512, False
-        elif task_mode == "Small":
-            base_size, image_size, crop_mode = 640, 640, False
-        elif task_mode == "Base":
-            base_size, image_size, crop_mode = 1024, 1024, False
-        elif task_mode == "Large":
-            base_size, image_size, crop_mode = 1280, 1280, False
-        elif task_mode == "Gundam (Recommended)":
-            base_size, image_size, crop_mode = 1024, 640, True
-        # else: Custom mode - use provided parameters
+        # Map task type to prompt
+        if task_type == "OCR":
+            prompt = "<image>\nOCR."
+        elif task_type == "Convert to Markdown":
+            prompt = "<image>\n<|grounding|>Convert the document to markdown."
+        elif task_type == "Parse Figure":
+            prompt = "<image>\nParse the figure."
+        elif task_type == "Locate Object by Reference":
+            if not reference_text.strip():
+                return "Error: Reference text is required for 'Locate Object by Reference' task. Please provide text to locate."
+            prompt = f"<image>\nLocate <|ref|>{reference_text.strip()}<|/ref|> in the image."
+        else:
+            prompt = "<image>\n<|grounding|>Convert the document to markdown."
 
-        print(f"Running inference with mode: {task_mode}")
+        # Configure resolution parameters based on resolution_size
+        if resolution_size == "Tiny":
+            base_size, image_size, crop_mode = 512, 512, False
+        elif resolution_size == "Small":
+            base_size, image_size, crop_mode = 640, 640, False
+        elif resolution_size == "Base":
+            base_size, image_size, crop_mode = 1024, 1024, False
+        elif resolution_size == "Large":
+            base_size, image_size, crop_mode = 1280, 1280, False
+        else:  # Gundam (Recommended)
+            base_size, image_size, crop_mode = 1024, 640, True
+
+        print(f"Task: {task_type}")
+        print(f"Resolution: {resolution_size}")
         print(f"Parameters: base_size={base_size}, image_size={image_size}, crop_mode={crop_mode}")
 
         # Create temporary directory for output
@@ -144,8 +139,8 @@ class Predictor(BasePredictor):
                     base_size=base_size,
                     image_size=image_size,
                     crop_mode=crop_mode,
-                    test_compress=test_compress,
-                    save_results=save_visualization
+                    test_compress=True,
+                    save_results=False
                 )
 
             # Return the extracted text/markdown
