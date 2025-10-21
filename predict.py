@@ -2,47 +2,47 @@
 # https://cog.run/python
 
 import os
+import time
 import torch
+import subprocess
 import tempfile
 import warnings
-import logging
 from cog import BasePredictor, Input, Path
 from transformers import AutoTokenizer
-
-# Import the custom DeepSeek-OCR model class
-from checkpoints import DeepseekOCRForCausalLM
 
 # Suppress all warnings from transformers
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
 
-# Set transformers logging to error only
-logging.getLogger('transformers').setLevel(logging.ERROR)
+MODEL_PATH = "checkpoints"
+MODEL_URL = "https://weights.replicate.delivery/default/deepseek-ai/DeepSeek-OCR/model.tar"
 
-# Filter out known warnings from transformers that we cannot fix
-# These warnings come from the underlying transformers library and model architecture
-warnings.filterwarnings('ignore', category=UserWarning)
-warnings.filterwarnings('ignore', category=FutureWarning)
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-
+def download_weights(url, dest):
+    start = time.time()
+    print("downloading url: ", url)
+    print("downloading to: ", dest)
+    subprocess.check_call(["pget", "-xf", url, dest], close_fds=False)
+    print("downloading took: ", time.time() - start)
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load the DeepSeek-OCR model into memory to make running multiple predictions efficient"""
-        print("Loading DeepSeek-OCR model from local checkpoints...")
+        # Download weights
+        if not os.path.exists(MODEL_PATH):
+            download_weights(MODEL_URL, MODEL_PATH)
 
+        from checkpoints import DeepseekOCRForCausalLM
+            
+        print("Loading DeepSeek-OCR model from local checkpoints...")
         # Configure for offline mode - no internet access needed
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         os.environ["HF_HUB_OFFLINE"] = "1"
         os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
-        # Load model from local checkpoints directory
-        model_path = "./checkpoints"
-
         # Load tokenizer in offline mode
         # Using local_files_only to prevent any network calls
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
+            MODEL_PATH,
             local_files_only=True
         )
 
@@ -58,7 +58,7 @@ class Predictor(BasePredictor):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.model = DeepseekOCRForCausalLM.from_pretrained(
-                model_path,
+                MODEL_PATH,
                 _attn_implementation='flash_attention_2',
                 local_files_only=True,
                 use_safetensors=True,
