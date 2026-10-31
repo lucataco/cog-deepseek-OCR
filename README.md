@@ -246,7 +246,9 @@ If you use this implementation, please cite the original DeepSeek-OCR paper:
 
 ## License
 
-This implementation follows the license of the original DeepSeek-OCR model. Please refer to the [official repository](https://huggingface.co/deepseek-ai/DeepSeek-OCR) for licensing details.
+The code in this repository is licensed under the [Apache License 2.0](LICENSE).
+
+The model weights are not covered by this license. [deepseek-ai/DeepSeek-OCR](https://huggingface.co/deepseek-ai/DeepSeek-OCR) is released under the [MIT](https://github.com/deepseek-ai/DeepSeek-OCR/blob/main/LICENSE) license.
 
 ## Acknowledgments
 
